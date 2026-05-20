@@ -3,12 +3,13 @@
 #include "overlays/actors/ovl_En_Arrow/z_en_arrow.h"
 #include "overlays/actors/ovl_En_Bom/z_en_bom.h"
 
-static EnArrow *sInitializingArrow = NULL;
-static PlayState *sPlayStateAtArrowInit = NULL;
+static EnArrow *sCurrentArrow = NULL;
+static PlayState *sCurrentPlayState = NULL;
 
 typedef struct {
   EnArrow *arrow;
   EnBom *bomb;
+  bool released;
 } BombArrowLink;
 
 #define MAX_BOMB_ARROWS 16
@@ -20,6 +21,7 @@ static void BombArrow_Link(EnArrow *arrow, EnBom *bomb) {
     if (sBombArrowLinks[i].arrow == NULL) {
       sBombArrowLinks[i].arrow = arrow;
       sBombArrowLinks[i].bomb = bomb;
+      sBombArrowLinks[i].released = false;
       return;
     }
   }
@@ -31,6 +33,7 @@ static EnBom *BombArrow_Unlink(EnArrow *arrow) {
       EnBom *bomb = sBombArrowLinks[i].bomb;
       sBombArrowLinks[i].arrow = NULL;
       sBombArrowLinks[i].bomb = NULL;
+      sBombArrowLinks[i].released = false;
       return bomb;
     }
   }
@@ -38,50 +41,128 @@ static EnBom *BombArrow_Unlink(EnArrow *arrow) {
   return NULL;
 }
 
-static EnBom *BombArrow_FindBomb(EnArrow *arrow) {
+static BombArrowLink *BombArrow_FindLink(EnArrow *arrow) {
   for (s32 i = 0; i < MAX_BOMB_ARROWS; i++) {
     if (sBombArrowLinks[i].arrow == arrow) {
-      return sBombArrowLinks[i].bomb;
+      return &sBombArrowLinks[i];
     }
   }
 
   return NULL;
 }
 
-static void BombArrow_DisableAttachedBombCollision(EnBom *bomb) {
-  if (bomb == NULL) {
-    return;
+static BombArrowLink *BombArrow_FindNockedLink() {
+  for (s32 i = 0; i < MAX_BOMB_ARROWS; i++) {
+    if ((sBombArrowLinks[i].arrow != NULL) &&
+        (sBombArrowLinks[i].bomb != NULL) && !sBombArrowLinks[i].released) {
+      return &sBombArrowLinks[i];
+    }
   }
 
-  /*
-   * Prevent the arrow's collider from immediately hitting its own bomb.
-   */
-  bomb->collider1.base.acFlags = AC_NONE;
-}
-static void BombArrow_UpdateAttachedBomb(EnArrow *arrow) {
-  EnBom *bomb = BombArrow_FindBomb(arrow);
-
-  if (bomb == NULL) {
-    return;
-  }
-  Vec3f arrow_head_position = arrow->unk_234;
-  Actor_SetScale(&bomb->actor, 0.0025f);
-  Math_Vec3f_Copy(&bomb->actor.prevPos, &bomb->actor.world.pos);
-  Math_Vec3f_Copy(&bomb->actor.world.pos, &arrow->actor.world.pos);
-  Math_Vec3s_Copy(&bomb->actor.world.rot, &arrow->actor.world.rot);
+  return NULL;
 }
 
-static bool IsBombArrow(EnArrow *arrow) {
+static bool BombArrow_IsReleased(EnArrow *arrow, PlayState *play) {
   if (arrow == NULL) {
     return false;
   }
-  return arrow->actor.params == ARROW_TYPE_NORMAL;
+  return Actor_HasNoParent(&arrow->actor, play);
+}
+
+static void BombArrow_UpdateAttachedBomb(EnArrow *arrow, PlayState *play) {
+  BombArrowLink *link = BombArrow_FindLink(arrow);
+
+  if ((link == NULL) || (link->bomb == NULL)) {
+    return;
+  }
+
+  if (!link->released) {
+    if (BombArrow_IsReleased(arrow, play)) {
+      link->released = true;
+    } else {
+      return;
+    }
+  }
+
+  EnBom *bomb = link->bomb;
+
+  if (bomb == NULL) {
+    return;
+  }
+
+  Actor_SetScale(&bomb->actor, 0.0025f);
+
+  /*
+   * Local-space offset from the center of the arrow shaft.
+   * Tune these in arrow-local space.
+   */
+  static Vec3f loosedBombOffset = {0, 0, 4};
+  Vec3f bombPos;
+  MtxF bombMf;
+
+  Matrix_Push();
+
+  Matrix_SetTranslateRotateYXZ(
+      arrow->actor.world.pos.x, arrow->actor.world.pos.y,
+      arrow->actor.world.pos.z, &arrow->actor.shape.rot);
+
+  Matrix_MultVec3f(&loosedBombOffset, &bombPos);
+  Matrix_Get(&bombMf);
+
+  Matrix_Pop();
+
+  Math_Vec3f_Copy(&bomb->actor.world.pos, &bombPos);
+  Math_Vec3f_Copy(&bomb->actor.prevPos, &bombPos);
+
+  Matrix_MtxFToYXZRot(&bombMf, &bomb->actor.world.rot, false);
+  Math_Vec3s_Copy(&bomb->actor.shape.rot, &bomb->actor.world.rot);
+}
+
+static void BombArrow_UpdateNockedBombFromPlayerLimb(Player *player,
+                                                     s32 limbIndex) {
+  if (player == NULL) {
+    return;
+  }
+
+  if ((limbIndex != PLAYER_LIMB_RIGHT_HAND) ||
+      (player->rightHandType != PLAYER_MODELTYPE_RH_BOW)) {
+    return;
+  }
+
+  BombArrowLink *link = BombArrow_FindNockedLink();
+
+  if ((link == NULL) || (link->bomb == NULL)) {
+    return;
+  }
+
+  EnBom *bomb = link->bomb;
+
+  /*
+   * Local-space offset from the right hand limb.
+   */
+  static Vec3f sNockedBombOffset = {275, 1000, 275};
+
+  Vec3f bombPos;
+  MtxF bombMf;
+
+  Matrix_MultVec3f(&sNockedBombOffset, &bombPos);
+  Matrix_Get(&bombMf);
+
+  Actor_SetScale(&bomb->actor, 0.0025f);
+
+  Math_Vec3f_Copy(&bomb->actor.world.pos, &bombPos);
+  Math_Vec3f_Copy(&bomb->actor.prevPos, &bombPos);
+
+  Matrix_MtxFToYXZRot(&bombMf, &bomb->actor.world.rot, false);
+  Math_Vec3s_Copy(&bomb->actor.shape.rot, &bomb->actor.world.rot);
 }
 
 static void InitializeBombArrow(EnArrow *arrow, PlayState *play) {
-  if ((play == NULL) || !IsBombArrow(arrow)) {
+  if ((play == NULL) || (arrow == NULL) ||
+      arrow->actor.params != ARROW_TYPE_NORMAL) {
     return;
   }
+
   EnBom *bomb = (EnBom *)Actor_SpawnAsChild(
       &play->actorCtx, &arrow->actor, play, ACTOR_EN_BOM,
       arrow->actor.world.pos.x, arrow->actor.world.pos.y,
@@ -90,7 +171,10 @@ static void InitializeBombArrow(EnArrow *arrow, PlayState *play) {
 
   if (bomb != NULL) {
     Actor_SetScale(&bomb->actor, 0.0025f);
-    BombArrow_DisableAttachedBombCollision(bomb);
+    /*
+     * Prevent the arrow's collider from immediately hitting its own bomb.
+     */
+    bomb->collider1.base.acFlags = AC_NONE;
     BombArrow_Link(arrow, bomb);
   }
 
@@ -117,24 +201,40 @@ static void TryDetonateBombArrow(EnArrow *arrow) {
 
 RECOMP_HOOK("EnArrow_Init")
 void bomb_arrow_init_entry(Actor *thisx, PlayState *play) {
-  sInitializingArrow = (EnArrow *)thisx;
-  sPlayStateAtArrowInit = play;
+  sCurrentArrow = (EnArrow *)thisx;
+  sCurrentPlayState = play;
 }
 
 RECOMP_HOOK_RETURN("EnArrow_Init")
 void bomb_arrow_init_return() {
-  EnArrow *arrow = sInitializingArrow;
-  sInitializingArrow = NULL;
+  EnArrow *arrow = sCurrentArrow;
+  sCurrentArrow = NULL;
 
-  PlayState *play = sPlayStateAtArrowInit;
-  sPlayStateAtArrowInit = NULL;
+  PlayState *play = sCurrentPlayState;
+  sCurrentPlayState = NULL;
 
   InitializeBombArrow(arrow, play);
 }
 
+RECOMP_HOOK("Player_PostLimbDrawGameplay")
+void bomb_arrow_post_limb_draw(PlayState *play, s32 limbIndex, Gfx **dList1,
+                               Gfx **dList2, Vec3s *rot, Actor *actor) {
+  BombArrow_UpdateNockedBombFromPlayerLimb((Player *)actor, limbIndex);
+}
+
 RECOMP_HOOK("EnArrow_Update")
 void bomb_arrow_update(Actor *thisx, PlayState *play) {
-  BombArrow_UpdateAttachedBomb((EnArrow *)thisx);
+  sCurrentArrow = (EnArrow *)thisx;
+  sCurrentPlayState = play;
+}
+
+RECOMP_HOOK_RETURN("EnArrow_Update")
+void bomb_arrow_update_return() {
+  EnArrow *arrow = sCurrentArrow;
+  sCurrentArrow = NULL;
+  PlayState *play = sCurrentPlayState;
+  sCurrentPlayState = NULL;
+  BombArrow_UpdateAttachedBomb(arrow, play);
 }
 
 RECOMP_HOOK("EnArrow_Destroy")
