@@ -1,5 +1,4 @@
 #include "../include/modding.h"
-#include "../include/z64actor.h"
 #include "overlays/actors/ovl_En_Arrow/z_en_arrow.h"
 #include "overlays/actors/ovl_En_Bom/z_en_bom.h"
 
@@ -9,7 +8,7 @@ static PlayState *sCurrentPlayState = NULL;
 typedef struct {
   EnArrow *arrow;
   EnBom *bomb;
-  bool released;
+  bool loosed;
 } BombArrowLink;
 
 #define MAX_BOMB_ARROWS 16
@@ -21,7 +20,7 @@ static void BombArrow_Link(EnArrow *arrow, EnBom *bomb) {
     if (sBombArrowLinks[i].arrow == NULL) {
       sBombArrowLinks[i].arrow = arrow;
       sBombArrowLinks[i].bomb = bomb;
-      sBombArrowLinks[i].released = false;
+      sBombArrowLinks[i].loosed = false;
       return;
     }
   }
@@ -33,7 +32,7 @@ static EnBom *BombArrow_Unlink(EnArrow *arrow) {
       EnBom *bomb = sBombArrowLinks[i].bomb;
       sBombArrowLinks[i].arrow = NULL;
       sBombArrowLinks[i].bomb = NULL;
-      sBombArrowLinks[i].released = false;
+      sBombArrowLinks[i].loosed = false;
       return bomb;
     }
   }
@@ -41,7 +40,7 @@ static EnBom *BombArrow_Unlink(EnArrow *arrow) {
   return NULL;
 }
 
-static BombArrowLink *BombArrow_FindLink(EnArrow *arrow) {
+static BombArrowLink *BombArrow_FindLinkByArrow(EnArrow *arrow) {
   for (s32 i = 0; i < MAX_BOMB_ARROWS; i++) {
     if (sBombArrowLinks[i].arrow == arrow) {
       return &sBombArrowLinks[i];
@@ -54,7 +53,7 @@ static BombArrowLink *BombArrow_FindLink(EnArrow *arrow) {
 static BombArrowLink *BombArrow_FindNockedLink() {
   for (s32 i = 0; i < MAX_BOMB_ARROWS; i++) {
     if ((sBombArrowLinks[i].arrow != NULL) &&
-        (sBombArrowLinks[i].bomb != NULL) && !sBombArrowLinks[i].released) {
+        (sBombArrowLinks[i].bomb != NULL) && !sBombArrowLinks[i].loosed) {
       return &sBombArrowLinks[i];
     }
   }
@@ -62,7 +61,7 @@ static BombArrowLink *BombArrow_FindNockedLink() {
   return NULL;
 }
 
-static bool BombArrow_IsReleased(EnArrow *arrow, PlayState *play) {
+static bool BombArrow_IsLoosed(EnArrow *arrow, PlayState *play) {
   if (arrow == NULL) {
     return false;
   }
@@ -70,24 +69,32 @@ static bool BombArrow_IsReleased(EnArrow *arrow, PlayState *play) {
 }
 
 static void BombArrow_UpdateAttachedBomb(EnArrow *arrow, PlayState *play) {
-  BombArrowLink *link = BombArrow_FindLink(arrow);
+  BombArrowLink *link = BombArrow_FindLinkByArrow(arrow);
 
   if ((link == NULL) || (link->bomb == NULL)) {
     return;
   }
 
-  if (!link->released) {
-    if (BombArrow_IsReleased(arrow, play)) {
-      link->released = true;
-    } else {
-      return;
-    }
-  }
-
   EnBom *bomb = link->bomb;
 
-  if (bomb == NULL) {
-    return;
+  if (!link->loosed) {
+    if (!BombArrow_IsLoosed(arrow, play)) {
+      return;
+    }
+
+    Inventory_ChangeAmmo(ITEM_BOMB, -1);
+
+    /*
+     * A linked, unreleased bomb reaching timer 0 means it detonated while
+     * nocked. Expend an arrow also. The explosion destroys it.
+     * TODO: timer never seems to resolve to <= 0 here. 8 seems to be where it
+     * hits once and only once. Will this be consistent?
+     */
+    if (bomb->timer <= 8) {
+      Inventory_ChangeAmmo(ITEM_BOW, -1);
+    }
+
+    link->loosed = true;
   }
 
   Actor_SetScale(&bomb->actor, 0.0025f);
@@ -159,7 +166,7 @@ static void BombArrow_UpdateNockedBombFromPlayerLimb(Player *player,
 
 static void InitializeBombArrow(EnArrow *arrow, PlayState *play) {
   if ((play == NULL) || (arrow == NULL) ||
-      arrow->actor.params != ARROW_TYPE_NORMAL) {
+      arrow->actor.params != ARROW_TYPE_NORMAL || AMMO(ITEM_BOMB) <= 0) {
     return;
   }
 
@@ -177,12 +184,6 @@ static void InitializeBombArrow(EnArrow *arrow, PlayState *play) {
     bomb->collider1.base.acFlags = AC_NONE;
     BombArrow_Link(arrow, bomb);
   }
-
-  /*
-   * Drop arrow damage to zero so that struck enemies are instead
-   * damaged by the bomb explosion.
-   */
-  arrow->collider.elem.atDmgInfo.damage = 0;
 }
 
 static void TryDetonateBombArrow(EnArrow *arrow) {
