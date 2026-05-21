@@ -1,72 +1,42 @@
-# Config file for Bomb Arrow mod for Majora's Mask: Recompiled.
-
-# Fields that end up in the mod's manifest.
 [manifest]
 
-# Unique ID of this mod. Pick something long enough that it'll never be the same as any other mod.
-# The name displayed in the mod management menu is separate from this so this doesn't need to be human readable.
 id = "mm_recomp_bomb_arrows"
 
-# Version of this mod.
 version = "1.0.0"
 
-# The name that will show up for this mod in the mod menu. This should be human readable.
 display_name = "Bomb Arrows"
 
-# The description that will show up when this mod is displayed in the mod menu. This should be human readable.
-description =  """
+description = """
 Adds the ability to combine arrows with bombs like in other Zelda titles. \
 Fasten a bomb to the tip of an arrow, causing it to detonate on impact or when the fuse expires.
 
 To use bomb arrows, assign both the Hero's Bow and Bombs to the same control button. \
 Each bomb arrow consumes one arrow and one bomb."""
 
-# A short description that will show up in this mod's entry in the mod list. This should be human readable and kept short
-# to prevent it from being cut off due to the limited space.
 short_description = "Combine arrows with bombs for explosive projectiles."
 
-# Authors of this mod.
-authors = [ "MM Recomp Bomb Arrow Mod" ]
+authors = ["PK Cheap"]
 
-# ID of the target recomp game.
 game_id = "mm"
 
-# Minimum version of the target recomp (e.g. Zelda 64: Recompiled) that this mod can run on.
 minimum_recomp_version = "1.2.2"
 
-# Dependency mods. Each entry is the mod's ID and then an optional minimum version of the dependency mod.
-dependencies = [
-# Example dependency:
-#    "modname:1.0.0"
-]
+dependencies = ["mm_recomp_interface_helper:1.1.0"]
 
-# Optional dependency mods. This has the same format as `dependencies`, but the game will still start if dependencies in this
-# list aren't present. You can query the presence of a given dependency by using `recomp_is_dependency_met` in recomputils.h.
-# Calling a function imported from an optional dependency that isn't present will trigger an error.
-optional_dependencies = [
+optional_dependencies = []
 
-]
+native_libraries = []
 
-# Native libraries (e.g. DLLs) and the functions they export.
-native_libraries = [
-# Example native library:
-#    { name = "my_native_library", funcs = ["my_native_library_function"] }
-]
-
-# Inputs to the mod tool.
 [inputs]
 
-# Input elf file to generate a mod from.
 elf_path = "build/mod.elf"
 
-# Output mod filename.
 mod_filename = "mm_recomp_bomb_arrows"
 
-# Reference symbol files.
 func_reference_syms_file = "Zelda64RecompSyms/mm.us.rev1.syms.toml"
-data_reference_syms_files = [ "Zelda64RecompSyms/mm.us.rev1.datasyms.toml", "Zelda64RecompSyms/mm.us.rev1.datasyms_static.toml" ]
+data_reference_syms_files = [
+	"Zelda64RecompSyms/mm.us.rev1.datasyms.toml",
+	"Zelda64RecompSyms/mm.us.rev1.datasyms_static.toml",
+]
 
-# Additional files to include in the mod.
-additional_files = [ ]
-
-# No config options needed for this mod
+additional_files = []

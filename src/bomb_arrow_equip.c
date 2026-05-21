@@ -29,6 +29,12 @@ static s32 BombArrow_GetEquipSlotFromPauseTarget(s32 equipTargetCBtn) {
     return -1;
   }
 }
+
+bool BombArrow_IsEquipSlotBombArrow(s32 equipSlot) {
+  return ((BUTTON_ITEM_EQUIP(0, equipSlot) & 0xFF) == ITEM_BOW) &&
+         ((C_SLOT_EQUIP(0, equipSlot) & 0xFF) == SLOT_BOMB);
+}
+
 static bool BombArrow_IsEquip(u8 item, u8 slot) {
   return (item == ITEM_BOW) && (slot == SLOT_BOMB);
 }
@@ -39,6 +45,16 @@ static bool BombArrow_IsNormalBowEquip(u8 item, u8 slot) {
 
 static bool BombArrow_IsBombEquip(u8 item, u8 slot) {
   return (item == ITEM_BOMB) && (slot == SLOT_BOMB);
+}
+
+static bool BombArrow_IsMagicBowEquip(u8 item, u8 slot) {
+  return (slot == SLOT_BOW) && (item >= ITEM_BOW_FIRE) &&
+         (item <= ITEM_BOW_LIGHT);
+}
+
+static bool BombArrow_IsAnyBowEquip(u8 item, u8 slot) {
+  return BombArrow_IsNormalBowEquip(item, slot) ||
+         BombArrow_IsMagicBowEquip(item, slot) || BombArrow_IsEquip(item, slot);
 }
 
 static void BombArrow_ResolveEquip(u8 currentItem, u8 currentSlot,
@@ -68,7 +84,7 @@ static void BombArrow_ResolveEquip(u8 currentItem, u8 currentSlot,
   /*
    * Bow + bombs on the same C-button becomes bomb arrows.
    */
-  if (BombArrow_IsNormalBowEquip(currentItem, currentSlot) &&
+  if (BombArrow_IsAnyBowEquip(currentItem, currentSlot) &&
       BombArrow_IsBombEquip(targetItem, targetSlot)) {
     *resolvedItem = ITEM_BOW;
     *resolvedSlot = SLOT_BOMB;
@@ -84,11 +100,6 @@ static void BombArrow_ResolveEquip(u8 currentItem, u8 currentSlot,
     *resolvedSlot = SLOT_BOMB;
     return;
   }
-}
-
-static bool BombArrow_IsEquipSlotBombArrow(s32 equipSlot) {
-  return ((BUTTON_ITEM_EQUIP(0, equipSlot) & 0xFF) == ITEM_BOW) &&
-         ((C_SLOT_EQUIP(0, equipSlot) & 0xFF) == SLOT_BOMB);
 }
 
 bool BombArrow_IsActiveBombArrowEquip(PlayState *play) {
@@ -110,6 +121,92 @@ bool BombArrow_IsActiveBombArrowEquip(PlayState *play) {
 
   default:
     return false;
+  }
+}
+
+static bool BombArrow_IsUsableDisplacedEquip(u8 item, u8 slot) {
+  return (item != ITEM_NONE) && (slot != SLOT_NONE) &&
+         !BombArrow_IsAnyBowEquip(item, slot);
+}
+
+static void BombArrow_SetEquipSlot(PlayState *play, s32 equipSlot, u8 item,
+                                   u8 slot) {
+  BUTTON_ITEM_EQUIP(0, equipSlot) = item;
+  C_SLOT_EQUIP(0, equipSlot) = slot;
+  Interface_LoadItemIconImpl(play, equipSlot);
+}
+
+static void BombArrow_EnforceSingleBowEquip(PlayState *play,
+                                            s32 targetEquipSlot,
+                                            u8 displacedItem,
+                                            u8 displacedSlot) {
+  static s32 sCEquipSlots[] = {
+      EQUIP_SLOT_C_LEFT,
+      EQUIP_SLOT_C_DOWN,
+      EQUIP_SLOT_C_RIGHT,
+  };
+
+  u8 targetItem = BUTTON_ITEM_EQUIP(0, targetEquipSlot) & 0xFF;
+  u8 targetSlot = C_SLOT_EQUIP(0, targetEquipSlot) & 0xFF;
+
+  if (!BombArrow_IsAnyBowEquip(targetItem, targetSlot)) {
+    return;
+  }
+
+  bool targetIsBombArrow = BombArrow_IsEquip(targetItem, targetSlot);
+  bool usedDisplacedItem = false;
+
+  for (s32 i = 0; i < ARRAY_COUNT(sCEquipSlots); i++) {
+    s32 equipSlot = sCEquipSlots[i];
+
+    if (equipSlot == targetEquipSlot) {
+      continue;
+    }
+
+    u8 item = BUTTON_ITEM_EQUIP(0, equipSlot) & 0xFF;
+    u8 slot = C_SLOT_EQUIP(0, equipSlot) & 0xFF;
+
+    if (!BombArrow_IsAnyBowEquip(item, slot)) {
+      continue;
+    }
+
+    /*
+     * If a normal/magic bow replaces bomb arrows, the old bomb-arrow slot
+     * should receive the item displaced from the target slot when possible.
+     * If nothing useful was displaced, leave bombs behind.
+     */
+    if (BombArrow_IsEquip(item, slot)) {
+      if (!usedDisplacedItem &&
+          BombArrow_IsUsableDisplacedEquip(displacedItem, displacedSlot)) {
+        BombArrow_SetEquipSlot(play, equipSlot, displacedItem, displacedSlot);
+        usedDisplacedItem = true;
+      } else {
+        BombArrow_SetEquipSlot(play, equipSlot, ITEM_BOMB, SLOT_BOMB);
+      }
+
+      continue;
+    }
+
+    /*
+     * If bomb arrows replace another bow assignment, the old bow slot becomes
+     * bombs so bombs remain separately equippable.
+     */
+    if (targetIsBombArrow) {
+      BombArrow_SetEquipSlot(play, equipSlot, ITEM_BOMB, SLOT_BOMB);
+      continue;
+    }
+
+    /*
+     * Normal bow-family behavior: move the displaced non-bow item into the old
+     * bow slot, otherwise clear it.
+     */
+    if (!usedDisplacedItem &&
+        BombArrow_IsUsableDisplacedEquip(displacedItem, displacedSlot)) {
+      BombArrow_SetEquipSlot(play, equipSlot, displacedItem, displacedSlot);
+      usedDisplacedItem = true;
+    } else {
+      BombArrow_SetEquipSlot(play, equipSlot, ITEM_NONE, SLOT_NONE);
+    }
   }
 }
 
@@ -170,12 +267,11 @@ void kaleido_scope_update_item_equip_return() {
   BombArrow_ResolveEquip(ctx.currentItem, ctx.currentSlot, ctx.targetItem,
                          ctx.targetSlot, &resolvedItem, &resolvedSlot);
 
-  if (((BUTTON_ITEM_EQUIP(0, ctx.equipSlot) & 0xFF) == resolvedItem) &&
-      ((C_SLOT_EQUIP(0, ctx.equipSlot) & 0xFF) == resolvedSlot)) {
-    return;
-  }
-
   BUTTON_ITEM_EQUIP(0, ctx.equipSlot) = resolvedItem;
   C_SLOT_EQUIP(0, ctx.equipSlot) = resolvedSlot;
+
+  BombArrow_EnforceSingleBowEquip(ctx.play, ctx.equipSlot, ctx.currentItem,
+                                  ctx.currentSlot);
+
   Interface_LoadItemIconImpl(ctx.play, ctx.equipSlot);
 }

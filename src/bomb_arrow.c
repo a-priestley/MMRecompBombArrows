@@ -103,7 +103,6 @@ static void BombArrow_UpdateAttachedBomb(EnArrow *arrow, PlayState *play) {
 
   /*
    * Local-space offset from the center of the arrow shaft.
-   * Tune these in arrow-local space.
    */
   static Vec3f loosedBombOffset = {0, 0, 4};
   Vec3f bombPos;
