@@ -2,6 +2,8 @@
 #include "overlays/actors/ovl_En_Arrow/z_en_arrow.h"
 #include "overlays/actors/ovl_En_Bom/z_en_bom.h"
 
+bool BombArrow_IsActiveBombArrowEquip(PlayState *play);
+
 static EnArrow *sCurrentArrow = NULL;
 static PlayState *sCurrentPlayState = NULL;
 
@@ -166,7 +168,8 @@ static void BombArrow_UpdateNockedBombFromPlayerLimb(Player *player,
 
 static void InitializeBombArrow(EnArrow *arrow, PlayState *play) {
   if ((play == NULL) || (arrow == NULL) ||
-      arrow->actor.params != ARROW_TYPE_NORMAL || AMMO(ITEM_BOMB) <= 0) {
+      arrow->actor.params != ARROW_TYPE_NORMAL || AMMO(ITEM_BOMB) <= 0 ||
+      !BombArrow_IsActiveBombArrowEquip(play)) {
     return;
   }
 
