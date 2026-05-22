@@ -192,14 +192,33 @@ static void TryDetonateBombArrow(EnArrow *arrow) {
   if (arrow == NULL) {
     return;
   }
+  BombArrowLink *link = BombArrow_FindLinkByArrow(arrow);
+  bool loosed = link->loosed;
   EnBom *bomb = BombArrow_Unlink(arrow);
-  if (bomb != NULL) {
+  if (bomb == NULL) {
+    return;
+  }
+
+  if (loosed) {
     /*
+     * Arrow either collided with something,
+     * or despawned likely because it flew too far.
      * Drop fuse timer to zero, resulting in immediate detonation.
      */
     bomb->timer = 0;
+    /*
+     * Forcibly despawn arrow to prevent bounce off / geometry embed animation,
+     * since the explosion would destroy it.
+     */
+    Actor_Kill(&arrow->actor);
+    loosed = false;
+  } else {
+    /*
+     * Arrow actor destroyed likely because equipment has been swapped.
+     * Despawn bomb.
+     */
+    Actor_Kill(&bomb->actor);
   }
-  Actor_Kill(&arrow->actor);
 }
 
 RECOMP_HOOK("EnArrow_Init")
