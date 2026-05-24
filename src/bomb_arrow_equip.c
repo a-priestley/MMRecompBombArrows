@@ -5,6 +5,8 @@ typedef struct {
   bool valid;
   PlayState *play;
   s32 equipSlot;
+  s32 existingBombArrowEquipSlot;
+  s32 existingBombEquipSlot;
   s32 entryMainState;
   u8 currentItem;
   u8 currentSlot;
@@ -35,6 +37,22 @@ bool BombArrow_IsEquipSlotBombArrow(s32 equipSlot) {
          ((C_SLOT_EQUIP(0, equipSlot) & 0xFF) == SLOT_BOMB);
 }
 
+static s32 BombArrow_FindBombArrowEquipSlot(void) {
+  static s32 sCEquipSlots[] = {
+      EQUIP_SLOT_C_LEFT,
+      EQUIP_SLOT_C_DOWN,
+      EQUIP_SLOT_C_RIGHT,
+  };
+
+  for (s32 i = 0; i < ARRAY_COUNT(sCEquipSlots); i++) {
+    if (BombArrow_IsEquipSlotBombArrow(sCEquipSlots[i])) {
+      return sCEquipSlots[i];
+    }
+  }
+
+  return -1;
+}
+
 static bool BombArrow_IsEquip(u8 item, u8 slot) {
   return (item == ITEM_BOW) && (slot == SLOT_BOMB);
 }
@@ -55,6 +73,26 @@ static bool BombArrow_IsMagicBowEquip(u8 item, u8 slot) {
 static bool BombArrow_IsAnyBowEquip(u8 item, u8 slot) {
   return BombArrow_IsNormalBowEquip(item, slot) ||
          BombArrow_IsMagicBowEquip(item, slot) || BombArrow_IsEquip(item, slot);
+}
+
+static s32 BombArrow_FindBombEquipSlot(void) {
+  static s32 sCEquipSlots[] = {
+      EQUIP_SLOT_C_LEFT,
+      EQUIP_SLOT_C_DOWN,
+      EQUIP_SLOT_C_RIGHT,
+  };
+
+  for (s32 i = 0; i < ARRAY_COUNT(sCEquipSlots); i++) {
+    s32 equipSlot = sCEquipSlots[i];
+    u8 item = BUTTON_ITEM_EQUIP(0, equipSlot) & 0xFF;
+    u8 slot = C_SLOT_EQUIP(0, equipSlot) & 0xFF;
+
+    if (BombArrow_IsBombEquip(item, slot)) {
+      return equipSlot;
+    }
+  }
+
+  return -1;
 }
 
 static void BombArrow_ResolveEquip(u8 currentItem, u8 currentSlot,
@@ -229,6 +267,11 @@ void kaleido_scope_update_item_equip(PlayState *play) {
   sBombArrowEquipContext.valid = true;
   sBombArrowEquipContext.play = play;
   sBombArrowEquipContext.equipSlot = equipSlot;
+
+  sBombArrowEquipContext.existingBombArrowEquipSlot =
+      BombArrow_FindBombArrowEquipSlot();
+  sBombArrowEquipContext.existingBombEquipSlot = BombArrow_FindBombEquipSlot();
+
   sBombArrowEquipContext.entryMainState = pauseCtx->mainState;
 
   sBombArrowEquipContext.currentItem = BUTTON_ITEM_EQUIP(0, equipSlot) & 0xFF;
@@ -269,6 +312,29 @@ void kaleido_scope_update_item_equip_return() {
 
   BUTTON_ITEM_EQUIP(0, ctx.equipSlot) = resolvedItem;
   C_SLOT_EQUIP(0, ctx.equipSlot) = resolvedSlot;
+
+  if ((ctx.existingBombArrowEquipSlot >= 0) &&
+      (ctx.existingBombArrowEquipSlot != ctx.equipSlot) &&
+      BombArrow_IsBombEquip(resolvedItem, resolvedSlot)) {
+    BombArrow_SetEquipSlot(ctx.play, ctx.existingBombArrowEquipSlot, ITEM_BOW,
+                           SLOT_BOMB);
+  }
+
+  if ((ctx.existingBombEquipSlot >= 0) &&
+      (ctx.existingBombEquipSlot != ctx.equipSlot) &&
+      BombArrow_IsBombEquip(resolvedItem, resolvedSlot)) {
+    if (ctx.existingBombArrowEquipSlot == ctx.equipSlot) {
+      BombArrow_SetEquipSlot(ctx.play, ctx.existingBombEquipSlot, ITEM_BOW,
+                             SLOT_BOMB);
+    } else if (BombArrow_IsUsableDisplacedEquip(ctx.currentItem,
+                                                ctx.currentSlot)) {
+      BombArrow_SetEquipSlot(ctx.play, ctx.existingBombEquipSlot,
+                             ctx.currentItem, ctx.currentSlot);
+    } else {
+      BombArrow_SetEquipSlot(ctx.play, ctx.existingBombEquipSlot, ITEM_NONE,
+                             SLOT_NONE);
+    }
+  }
 
   BombArrow_EnforceSingleBowEquip(ctx.play, ctx.equipSlot, ctx.currentItem,
                                   ctx.currentSlot);
