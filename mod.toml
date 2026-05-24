@@ -2,7 +2,7 @@
 
 id = "mm_recomp_bomb_arrows"
 
-version = "1.0.0"
+version = "1.0.1"
 
 display_name = "Bomb Arrows"
 
@@ -39,4 +39,4 @@ data_reference_syms_files = [
 	"Zelda64RecompSyms/mm.us.rev1.datasyms_static.toml",
 ]
 
-additional_files = []
+additional_files = ["thumb.dds"]
