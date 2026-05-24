@@ -193,6 +193,9 @@ static void TryDetonateBombArrow(EnArrow *arrow) {
     return;
   }
   BombArrowLink *link = BombArrow_FindLinkByArrow(arrow);
+  if (link == NULL) {
+    return;
+  }
   bool loosed = link->loosed;
   EnBom *bomb = BombArrow_Unlink(arrow);
   if (bomb == NULL) {
