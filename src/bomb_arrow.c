@@ -168,7 +168,8 @@ static void BombArrow_UpdateNockedBombFromPlayerLimb(Player *player,
 static void InitializeBombArrow(EnArrow *arrow, PlayState *play) {
   if ((play == NULL) || (arrow == NULL) ||
       arrow->actor.params != ARROW_TYPE_NORMAL || AMMO(ITEM_BOMB) <= 0 ||
-      !BombArrow_IsActiveBombArrowEquip(play)) {
+      !BombArrow_IsActiveBombArrowEquip(play) ||
+      BombArrow_FindLinkByArrow(arrow) != NULL) {
     return;
   }
 
@@ -224,6 +225,40 @@ static void TryDetonateBombArrow(EnArrow *arrow) {
   }
 }
 
+static void BombArrow_UpdateNockedEquipState(EnArrow *arrow, PlayState *play) {
+  if ((play == NULL) || (arrow == NULL)) {
+    return;
+  }
+
+  BombArrowLink *link = BombArrow_FindLinkByArrow(arrow);
+  bool isLoosed = BombArrow_IsLoosed(arrow, play);
+  bool wantsBombArrow = BombArrow_IsActiveBombArrowEquip(play);
+
+  /*
+   * Existing bomb arrow is still nocked, but bomb arrows are no longer
+   * equipped. Remove only the bomb, leaving the normal arrow nocked.
+   */
+  if ((link != NULL) && (link->bomb != NULL) && !link->loosed && !isLoosed &&
+      !wantsBombArrow) {
+    EnBom *bomb = BombArrow_Unlink(arrow);
+
+    if (bomb != NULL) {
+      Actor_Kill(&bomb->actor);
+    }
+
+    return;
+  }
+
+  /*
+   * Existing normal arrow is still nocked, and bomb arrows became equipped.
+   * Upgrade it in-place by attaching a bomb.
+   */
+  if ((link == NULL) && !isLoosed && wantsBombArrow &&
+      arrow->actor.params == ARROW_TYPE_NORMAL && AMMO(ITEM_BOMB) > 0) {
+    InitializeBombArrow(arrow, play);
+  }
+}
+
 RECOMP_HOOK("EnArrow_Init")
 void bomb_arrow_init_entry(Actor *thisx, PlayState *play) {
   sCurrentArrow = (EnArrow *)thisx;
@@ -259,6 +294,7 @@ void bomb_arrow_update_return() {
   sCurrentArrow = NULL;
   PlayState *play = sCurrentPlayState;
   sCurrentPlayState = NULL;
+  BombArrow_UpdateNockedEquipState(arrow, play);
   BombArrow_UpdateAttachedBomb(arrow, play);
 }
 
