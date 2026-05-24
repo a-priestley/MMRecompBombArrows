@@ -1,0 +1,7 @@
+{
+  "name": "Bomb_Arrows",
+  "version_number": "1.0.1",
+  "website_url": "https://github.com/a-priestley/MMRecompBombArrows",
+  "description": "Combine arrows with bombs for explosive projectiles.",
+  "dependencies": ["tomtee-Interface_Helper-1.1.0"]
+}
