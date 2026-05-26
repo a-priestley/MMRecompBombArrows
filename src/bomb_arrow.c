@@ -1,19 +1,12 @@
 #include "../include/modding.h"
 #include "overlays/actors/ovl_En_Arrow/z_en_arrow.h"
 #include "overlays/actors/ovl_En_Bom/z_en_bom.h"
+#include "overlays/actors/ovl_En_Clear_Tag/z_en_clear_tag.h"
 
 bool BombArrow_IsActiveBombArrowEquip(PlayState *play);
 
 static EnArrow *sCurrentArrow = NULL;
 static PlayState *sCurrentPlayState = NULL;
-
-typedef struct {
-  EnArrow *arrow;
-  EnBom *bomb;
-  bool loosed;
-} BombArrowLink;
-
-#define MAX_BOMB_ARROWS 16
 
 static BombArrowLink sBombArrowLinks[MAX_BOMB_ARROWS];
 
@@ -189,7 +182,40 @@ static void InitializeBombArrow(EnArrow *arrow, PlayState *play) {
   }
 }
 
-static void TryDetonateBombArrow(EnArrow *arrow) {
+static void BombArrow_Submerge(EnArrow *arrow, PlayState *play) {
+  if (arrow == NULL) {
+    return;
+  }
+  BombArrowLink *link = BombArrow_FindLinkByArrow(arrow);
+  if (link == NULL) {
+    return;
+  }
+  EnBom *bomb = link->bomb;
+  if (bomb == NULL) {
+    return;
+  }
+  // if (arrow->actor.depthInWater >= 0.1f) {
+  if (bomb->actor.depthInWater >= 3.0f) {
+    bomb = BombArrow_Unlink(arrow);
+
+    Vec3f effPos;
+
+    effPos.x = bomb->actor.world.pos.x;
+    effPos.y = bomb->actor.world.pos.y + bomb->actor.depthInWater;
+    effPos.z = bomb->actor.world.pos.z;
+    effPos.y += 10.0f;
+    EffectSsGSplash_Spawn(play, &effPos, NULL, NULL, 1, 500);
+    Actor_Spawn(&play->actorCtx, play, ACTOR_EN_CLEAR_TAG, effPos.x, effPos.y,
+                effPos.z, 0, 0, 1, CLEAR_TAG_PARAMS(CLEAR_TAG_SMOKE));
+    SoundSource_PlaySfxAtFixedWorldPos(play, &bomb->actor.world.pos, 30,
+                                       NA_SE_IT_BOMB_UNEXPLOSION);
+    Actor_Kill(&bomb->actor);
+  } else {
+    Actor_PlaySfx(&bomb->actor, NA_SE_EV_BOMB_DROP_WATER);
+  }
+}
+
+static void BombArrow_TryDetonate(EnArrow *arrow) {
   if (arrow == NULL) {
     return;
   }
@@ -260,7 +286,7 @@ static void BombArrow_UpdateNockedEquipState(EnArrow *arrow, PlayState *play) {
 }
 
 RECOMP_HOOK("EnArrow_Init")
-void bomb_arrow_init_entry(Actor *thisx, PlayState *play) {
+void bomb_arrow_init(Actor *thisx, PlayState *play) {
   sCurrentArrow = (EnArrow *)thisx;
   sCurrentPlayState = play;
 }
@@ -300,12 +326,43 @@ void bomb_arrow_update_return() {
 
 RECOMP_HOOK("EnArrow_Destroy")
 void bomb_arrow_destroy(Actor *thisx, PlayState *play) {
-  TryDetonateBombArrow((EnArrow *)thisx);
+  BombArrow_TryDetonate((EnArrow *)thisx);
+}
+
+RECOMP_HOOK("func_8088A7D8")
+void bomb_arrow_actor_impact(PlayState *play, EnArrow *arrow) {
+  BombArrow_TryDetonate(arrow);
+}
+
+/*
+ * Arrow hit keese/guay
+ */
+RECOMP_HOOK("func_8088A894")
+void bomb_arrow_flyer_impact(EnArrow *arrow, PlayState *play) {
+  if (CFG_DETONATE_ON_FLYER_IMPACT) {
+    BombArrow_TryDetonate(arrow);
+  }
+}
+
+RECOMP_HOOK("func_8088AA98")
+void bomb_arrow_water_impact_check(EnArrow *arrow, PlayState *play) {
+  if (!CFG_DEFUSE_ON_SUBMERGE) {
+    return;
+  }
+  WaterBox *waterBox;
+  f32 sp50 = arrow->actor.world.pos.y;
+
+  if (WaterBox_GetSurface1(play, &play->colCtx, arrow->actor.world.pos.x,
+                           arrow->actor.world.pos.z, &sp50, &waterBox) &&
+      (arrow->actor.world.pos.y < sp50) &&
+      !(arrow->actor.bgCheckFlags & BGCHECKFLAG_WATER)) {
+    BombArrow_Submerge(arrow, play);
+  }
 }
 
 RECOMP_HOOK("func_8088B630")
 void bomb_arrow_world_impact(EnArrow *arrow, PlayState *play) {
-  TryDetonateBombArrow(arrow);
+  BombArrow_TryDetonate(arrow);
 }
 
 RECOMP_HOOK("func_8088A7D8")
