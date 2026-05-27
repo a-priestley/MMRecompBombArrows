@@ -1,4 +1,5 @@
-### 1.0.1
+### 1.0.2
 
-* fix(bomb-arrow): handle missing link when attempting detonation
-* chore(package): add thumbnail
+* add configurable defuse on submerge
+* add configurable flyer-impact (keese/guay) detonation
+* add configurable remote detonation via C-button

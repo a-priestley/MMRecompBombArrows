@@ -4,6 +4,8 @@ Adds the ability to combine arrows with bombs like in other Zelda titles.
 Fasten a bomb to the tip of an arrow, causing it to detonate on impact,
 or when the fuse expires.
 
+![Demonstration](readme/demo.gif)
+
 ## Usage
 
 To use bomb arrows, assign both the Hero's Bow and Bombs to the same control button.
