@@ -2,7 +2,7 @@
 
 id = "mm_recomp_bomb_arrows"
 
-version = "1.0.1"
+version = "1.0.2"
 
 display_name = "Bomb Arrows"
 
@@ -40,3 +40,31 @@ data_reference_syms_files = [
 ]
 
 additional_files = ["thumb.dds"]
+
+[[manifest.config_options]]
+id = "defuse_on_submerge"
+name = "Bombs Defuse When Submerged"
+description = "Bomb arrows will be defused and despawned when plunged into water."
+type = "Enum"
+options = ["on", "off"]
+default = "on"
+
+[[manifest.config_options]]
+id = "detonate_on_flyer_impact"
+name = "Bombs Detonate on Impact with Small Flying Enemies"
+description = """Normal arrow behavior when impacting enemies such as keese or guay
+is to continue its flight path, applying its momentum to the struck flyer.
+Enable this option for immediate detonation instead.
+Useful for felling entire flocks."""
+type = "Enum"
+options = ["on", "off"]
+default = "off"
+
+[[manifest.config_options]]
+id = "enable_remote_detonation"
+name = "Enable Remote Detonation"
+description = """After loosing a bomb arrow, push the assigned C-button a second time
+to remotely detonate it mid-flight."""
+type = "Enum"
+options = ["on", "off"]
+default = "off"
