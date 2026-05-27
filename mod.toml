@@ -59,3 +59,12 @@ Useful for felling entire flocks."""
 type = "Enum"
 options = ["on", "off"]
 default = "off"
+
+[[manifest.config_options]]
+id = "enable_remote_detonation"
+name = "Enable Remote Detonation"
+description = """After loosing a bomb arrow, push the assigned C-button a second time
+to remotely detonate it mid-flight."""
+type = "Enum"
+options = ["on", "off"]
+default = "off"

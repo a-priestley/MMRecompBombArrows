@@ -9,8 +9,10 @@ RECOMP_IMPORT("*", u32 recomp_get_config_u32(const char *key));
 
 #define CFG_DEFUSE_ON_SUBMERGE                                                 \
   !(bool)recomp_get_config_u32("defuse_on_submerge")
-#define CFG_DETONATE_ON_FLYER_IMPACT                                                 \
+#define CFG_DETONATE_ON_FLYER_IMPACT                                           \
   !(bool)recomp_get_config_u32("detonate_on_flyer_impact")
+#define CFG_ENABLE_REMOTE_DETONATION                                           \
+  !(bool)recomp_get_config_u32("enable_remote_detonation")
 
 typedef struct {
   EnArrow *arrow;

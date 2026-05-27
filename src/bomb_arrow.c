@@ -1,9 +1,8 @@
-#include "../include/modding.h"
-#include "overlays/actors/ovl_En_Arrow/z_en_arrow.h"
-#include "overlays/actors/ovl_En_Bom/z_en_bom.h"
+#include "./bomb_arrow.h"
 #include "overlays/actors/ovl_En_Clear_Tag/z_en_clear_tag.h"
 
 bool BombArrow_IsActiveBombArrowEquip(PlayState *play);
+u32 BombArrow_FindAssignedButton();
 
 static EnArrow *sCurrentArrow = NULL;
 static PlayState *sCurrentPlayState = NULL;
@@ -49,6 +48,17 @@ static BombArrowLink *BombArrow_FindNockedLink() {
   for (s32 i = 0; i < MAX_BOMB_ARROWS; i++) {
     if ((sBombArrowLinks[i].arrow != NULL) &&
         (sBombArrowLinks[i].bomb != NULL) && !sBombArrowLinks[i].loosed) {
+      return &sBombArrowLinks[i];
+    }
+  }
+
+  return NULL;
+}
+
+static BombArrowLink *BombArrow_FindFirstLoosedLink() {
+  for (s32 i = 0; i < MAX_BOMB_ARROWS; i++) {
+    if ((sBombArrowLinks[i].arrow != NULL) &&
+        (sBombArrowLinks[i].bomb != NULL) && sBombArrowLinks[i].loosed) {
       return &sBombArrowLinks[i];
     }
   }
@@ -285,6 +295,24 @@ static void BombArrow_UpdateNockedEquipState(EnArrow *arrow, PlayState *play) {
   }
 }
 
+static void BombArrow_RemoteDetonateCheck(PlayState *play, Input *input) {
+  BombArrowLink *link = BombArrow_FindFirstLoosedLink();
+  if (link == NULL || link->arrow == NULL ||
+      !BombArrow_IsActiveBombArrowEquip(play)) {
+    return;
+  }
+  u32 button = BombArrow_FindAssignedButton();
+
+  if (button == 0) {
+    return;
+  }
+
+  if (CHECK_BTN_ALL(input->press.button, button)) {
+    input->press.button &= ~button;
+    BombArrow_TryDetonate(link->arrow);
+  }
+}
+
 RECOMP_HOOK("EnArrow_Init")
 void bomb_arrow_init(Actor *thisx, PlayState *play) {
   sCurrentArrow = (EnArrow *)thisx;
@@ -365,7 +393,10 @@ void bomb_arrow_world_impact(EnArrow *arrow, PlayState *play) {
   BombArrow_TryDetonate(arrow);
 }
 
-RECOMP_HOOK("func_8088A7D8")
-void bomb_arrow_actor_impact(PlayState *play, EnArrow *arrow) {
-  TryDetonateBombArrow(arrow);
+RECOMP_HOOK("Player_UpdateCommon")
+void bomb_arrow_player_update_common(Player *this, PlayState *play,
+                                     Input *input) {
+  if (CFG_ENABLE_REMOTE_DETONATION) {
+    BombArrow_RemoteDetonateCheck(play, input);
+  }
 }

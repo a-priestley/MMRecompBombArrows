@@ -37,22 +37,6 @@ bool BombArrow_IsEquipSlotBombArrow(s32 equipSlot) {
          ((C_SLOT_EQUIP(0, equipSlot) & 0xFF) == SLOT_BOMB);
 }
 
-static s32 BombArrow_FindBombArrowEquipSlot(void) {
-  static s32 sCEquipSlots[] = {
-      EQUIP_SLOT_C_LEFT,
-      EQUIP_SLOT_C_DOWN,
-      EQUIP_SLOT_C_RIGHT,
-  };
-
-  for (s32 i = 0; i < ARRAY_COUNT(sCEquipSlots); i++) {
-    if (BombArrow_IsEquipSlotBombArrow(sCEquipSlots[i])) {
-      return sCEquipSlots[i];
-    }
-  }
-
-  return -1;
-}
-
 static bool BombArrow_IsEquip(u8 item, u8 slot) {
   return (item == ITEM_BOW) && (slot == SLOT_BOMB);
 }
@@ -75,13 +59,22 @@ static bool BombArrow_IsAnyBowEquip(u8 item, u8 slot) {
          BombArrow_IsMagicBowEquip(item, slot) || BombArrow_IsEquip(item, slot);
 }
 
-static s32 BombArrow_FindBombEquipSlot(void) {
-  static s32 sCEquipSlots[] = {
-      EQUIP_SLOT_C_LEFT,
-      EQUIP_SLOT_C_DOWN,
-      EQUIP_SLOT_C_RIGHT,
-  };
+static EquipSlot sCEquipSlots[] = {
+    EQUIP_SLOT_C_LEFT,
+    EQUIP_SLOT_C_DOWN,
+    EQUIP_SLOT_C_RIGHT,
+};
 
+static EquipSlot BombArrow_FindBombArrowEquipSlot(void) {
+  for (s32 i = 0; i < ARRAY_COUNT(sCEquipSlots); i++) {
+    if (BombArrow_IsEquipSlotBombArrow(sCEquipSlots[i])) {
+      return sCEquipSlots[i];
+    }
+  }
+  return EQUIP_SLOT_NONE;
+}
+
+static EquipSlot BombArrow_FindBombEquipSlot() {
   for (s32 i = 0; i < ARRAY_COUNT(sCEquipSlots); i++) {
     s32 equipSlot = sCEquipSlots[i];
     u8 item = BUTTON_ITEM_EQUIP(0, equipSlot) & 0xFF;
@@ -91,8 +84,30 @@ static s32 BombArrow_FindBombEquipSlot(void) {
       return equipSlot;
     }
   }
+  return EQUIP_SLOT_NONE;
+}
 
-  return -1;
+// static u32 sCButtons[] = {BTN_CLEFT, BTN_CDOWN, BTN_CRIGHT};
+
+u32 BombArrow_FindAssignedButton() {
+  EquipSlot slot = BombArrow_FindBombArrowEquipSlot();
+  u32 button = 0;
+  switch (slot) {
+  case EQUIP_SLOT_B:
+    button = BTN_B;
+  case EQUIP_SLOT_C_LEFT:
+    button = BTN_CLEFT;
+    break;
+  case EQUIP_SLOT_C_DOWN:
+    button = BTN_CDOWN;
+    break;
+  case EQUIP_SLOT_C_RIGHT:
+    button = BTN_CRIGHT;
+    break;
+  default:
+    break;
+  }
+  return button;
 }
 
 static void BombArrow_ResolveEquip(u8 currentItem, u8 currentSlot,
