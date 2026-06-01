@@ -50,10 +50,10 @@ options = ["on", "off"]
 default = "on"
 
 [[manifest.config_options]]
-id = "detonate_on_flyer_impact"
-name = "Bombs Detonate on Impact with Small Flying Enemies"
-description = """Normal arrow behavior when impacting enemies such as keese or guay
-is to continue its flight path, applying its momentum to the struck flyer.
+id = "detonate_on_airborne_impact"
+name = "Bombs Detonate on Impact with Flying or Suspended Enemies"
+description = """Normal arrow behavior when impacting enemies such as keese, guay,
+and hanging skulltulas is to continue its flight path, applying its momentum to the struck enemy.
 Enable this option for immediate detonation instead.
 Useful for felling entire flocks."""
 type = "Enum"

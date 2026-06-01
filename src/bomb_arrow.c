@@ -367,7 +367,7 @@ void bomb_arrow_actor_impact(PlayState *play, EnArrow *arrow) {
  */
 RECOMP_HOOK("func_8088A894")
 void bomb_arrow_flyer_impact(EnArrow *arrow, PlayState *play) {
-  if (CFG_DETONATE_ON_FLYER_IMPACT) {
+  if (CFG_DETONATE_ON_AIRBORNE_IMPACT) {
     BombArrow_TryDetonate(arrow);
   }
 }
