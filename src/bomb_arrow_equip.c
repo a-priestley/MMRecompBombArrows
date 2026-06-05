@@ -1,9 +1,9 @@
-#include "../include/modding.h"
+#include "modding.h"
 #include "overlays/kaleido_scope/ovl_kaleido_scope/z_kaleido_scope.h"
 
 typedef struct {
   bool valid;
-  PlayState *play;
+  PlayState* play;
   s32 equipSlot;
   s32 existingBombArrowEquipSlot;
   s32 existingBombEquipSlot;
@@ -18,17 +18,17 @@ static BombArrowEquipContext sBombArrowEquipContext;
 
 static s32 BombArrow_GetEquipSlotFromPauseTarget(s32 equipTargetCBtn) {
   switch (equipTargetCBtn) {
-  case PAUSE_EQUIP_C_LEFT:
-    return EQUIP_SLOT_C_LEFT;
+    case PAUSE_EQUIP_C_LEFT:
+      return EQUIP_SLOT_C_LEFT;
 
-  case PAUSE_EQUIP_C_DOWN:
-    return EQUIP_SLOT_C_DOWN;
+    case PAUSE_EQUIP_C_DOWN:
+      return EQUIP_SLOT_C_DOWN;
 
-  case PAUSE_EQUIP_C_RIGHT:
-    return EQUIP_SLOT_C_RIGHT;
+    case PAUSE_EQUIP_C_RIGHT:
+      return EQUIP_SLOT_C_RIGHT;
 
-  default:
-    return -1;
+    default:
+      return -1;
   }
 }
 
@@ -93,26 +93,26 @@ u32 BombArrow_FindAssignedButton() {
   EquipSlot slot = BombArrow_FindBombArrowEquipSlot();
   u32 button = 0;
   switch (slot) {
-  case EQUIP_SLOT_B:
-    button = BTN_B;
-  case EQUIP_SLOT_C_LEFT:
-    button = BTN_CLEFT;
-    break;
-  case EQUIP_SLOT_C_DOWN:
-    button = BTN_CDOWN;
-    break;
-  case EQUIP_SLOT_C_RIGHT:
-    button = BTN_CRIGHT;
-    break;
-  default:
-    break;
+    case EQUIP_SLOT_B:
+      button = BTN_B;
+    case EQUIP_SLOT_C_LEFT:
+      button = BTN_CLEFT;
+      break;
+    case EQUIP_SLOT_C_DOWN:
+      button = BTN_CDOWN;
+      break;
+    case EQUIP_SLOT_C_RIGHT:
+      button = BTN_CRIGHT;
+      break;
+    default:
+      break;
   }
   return button;
 }
 
 static void BombArrow_ResolveEquip(u8 currentItem, u8 currentSlot,
                                    u8 targetItem, u8 targetSlot,
-                                   u8 *resolvedItem, u8 *resolvedSlot) {
+                                   u8* resolvedItem, u8* resolvedSlot) {
   *resolvedItem = targetItem;
   *resolvedSlot = targetSlot;
 
@@ -155,25 +155,25 @@ static void BombArrow_ResolveEquip(u8 currentItem, u8 currentSlot,
   }
 }
 
-bool BombArrow_IsActiveBombArrowEquip(PlayState *play) {
+bool BombArrow_IsActiveBombArrowEquip(PlayState* play) {
   if (play == NULL) {
     return false;
   }
 
-  Player *player = GET_PLAYER(play);
+  Player* player = GET_PLAYER(play);
 
   if (player == NULL) {
     return false;
   }
 
   switch (player->heldItemButton) {
-  case EQUIP_SLOT_C_LEFT:
-  case EQUIP_SLOT_C_DOWN:
-  case EQUIP_SLOT_C_RIGHT:
-    return BombArrow_IsEquipSlotBombArrow(player->heldItemButton);
+    case EQUIP_SLOT_C_LEFT:
+    case EQUIP_SLOT_C_DOWN:
+    case EQUIP_SLOT_C_RIGHT:
+      return BombArrow_IsEquipSlotBombArrow(player->heldItemButton);
 
-  default:
-    return false;
+    default:
+      return false;
   }
 }
 
@@ -182,14 +182,14 @@ static bool BombArrow_IsUsableDisplacedEquip(u8 item, u8 slot) {
          !BombArrow_IsAnyBowEquip(item, slot);
 }
 
-static void BombArrow_SetEquipSlot(PlayState *play, s32 equipSlot, u8 item,
+static void BombArrow_SetEquipSlot(PlayState* play, s32 equipSlot, u8 item,
                                    u8 slot) {
   BUTTON_ITEM_EQUIP(0, equipSlot) = item;
   C_SLOT_EQUIP(0, equipSlot) = slot;
   Interface_LoadItemIconImpl(play, equipSlot);
 }
 
-static void BombArrow_EnforceSingleBowEquip(PlayState *play,
+static void BombArrow_EnforceSingleBowEquip(PlayState* play,
                                             s32 targetEquipSlot,
                                             u8 displacedItem,
                                             u8 displacedSlot) {
@@ -264,14 +264,14 @@ static void BombArrow_EnforceSingleBowEquip(PlayState *play,
 }
 
 RECOMP_HOOK("KaleidoScope_UpdateItemEquip")
-void kaleido_scope_update_item_equip(PlayState *play) {
+void kaleido_scope_update_item_equip(PlayState* play) {
   sBombArrowEquipContext.valid = false;
 
   if (play == NULL) {
     return;
   }
 
-  PauseContext *pauseCtx = &play->pauseCtx;
+  PauseContext* pauseCtx = &play->pauseCtx;
   s32 equipSlot =
       BombArrow_GetEquipSlotFromPauseTarget(pauseCtx->equipTargetCBtn);
 
@@ -305,7 +305,7 @@ void kaleido_scope_update_item_equip_return() {
     return;
   }
 
-  PauseContext *pauseCtx = &ctx.play->pauseCtx;
+  PauseContext* pauseCtx = &ctx.play->pauseCtx;
 
   /*
    * KaleidoScope_UpdateItemEquip is an animation update. Only override the

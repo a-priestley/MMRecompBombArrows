@@ -1,7 +1,7 @@
-#include "./interface_helper.h"
+#include "interface_helper.h"
 
-void CmpDma_LoadFile(uintptr_t segmentVrom, s32 id, void *dst, size_t size);
-void Interface_DrawItemIconTexture(PlayState *play, TexturePtr texture,
+void CmpDma_LoadFile(uintptr_t segmentVrom, s32 id, void* dst, size_t size);
+void Interface_DrawItemIconTexture(PlayState* play, TexturePtr texture,
                                    s16 button);
 bool BombArrow_IsEquipSlotBombArrow(s32 equipSlot);
 
@@ -16,7 +16,7 @@ ITEM_ICON_TEXTURE_SCALES_DECLARE
 
 typedef struct {
   bool valid;
-  PlayState *play;
+  PlayState* play;
   s16 button;
 } BombArrowItemIconDrawContext;
 
@@ -24,7 +24,7 @@ static BombArrowItemIconDrawContext sBombArrowItemIconDrawContext;
 static bool sBombArrowDrawingOverlay = false;
 static bool sBombArrowBombIconLoaded = false;
 static u32 sBombArrowBombIcon[ICON_ITEM_TEX_SIZE / sizeof(u32)];
-static PlayState *sIconLoadPlayState = NULL;
+static PlayState* sIconLoadPlayState = NULL;
 static s32 sIconLoadEquipSlot = -1;
 
 static bool BombArrow_InterfaceHelperReady(void) {
@@ -50,7 +50,7 @@ static bool BombArrow_IsCEquipSlot(s32 equipSlot) {
          (equipSlot == EQUIP_SLOT_C_RIGHT);
 }
 
-static void BombArrow_DrawBombIconOverlay(PlayState *play, s16 button) {
+static void BombArrow_DrawBombIconOverlay(PlayState* play, s16 button) {
   if ((play == NULL) || sBombArrowDrawingOverlay ||
       !BombArrow_IsCEquipSlot(button) ||
       !BombArrow_IsEquipSlotBombArrow(button) ||
@@ -103,7 +103,7 @@ static void BombArrow_DrawBombIconOverlay(PlayState *play, s16 button) {
 }
 
 RECOMP_HOOK("Interface_DrawItemIconTexture")
-void bomb_arrow_item_icon_draw_entry(PlayState *play, TexturePtr texture,
+void bomb_arrow_item_icon_draw_entry(PlayState* play, TexturePtr texture,
                                      s16 button) {
   sBombArrowItemIconDrawContext.valid = false;
 
