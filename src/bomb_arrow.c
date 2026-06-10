@@ -56,7 +56,7 @@ static BombArrowLink* BombArrow_FindNockedLink() {
   return NULL;
 }
 
-static BombArrowLink *BombArrow_FindFirstLoosedLink() {
+static BombArrowLink* BombArrow_FindFirstLoosedLink() {
   for (s32 i = 0; i < MAX_BOMB_ARROWS; i++) {
     if ((sBombArrowLinks[i].arrow != NULL) &&
         (sBombArrowLinks[i].bomb != NULL) && sBombArrowLinks[i].loosed) {
@@ -169,6 +169,10 @@ static void BombArrow_Submerge(EnArrow* arrow, PlayState* play) {
   }
 }
 
+static bool BombArrow_IsBombExploding(EnBom* bomb) {
+  return (bomb != NULL) && (bomb->actor.params == BOMB_TYPE_EXPLOSION);
+}
+
 static void BombArrow_TryDetonate(EnArrow* arrow) {
   if (arrow == NULL) {
     return;
@@ -180,6 +184,15 @@ static void BombArrow_TryDetonate(EnArrow* arrow) {
   bool loosed = link->loosed;
   EnBom* bomb = BombArrow_Unlink(arrow);
   if (bomb == NULL) {
+    return;
+  }
+
+  /*
+   * The bomb has already entered its explosion actor state.
+   * Do not kill it or force timer to 0, because EnBom_Explode needs to run
+   * its full countdown to fade the environment lighting back down.
+   */
+  if (BombArrow_IsBombExploding(bomb)) {
     return;
   }
 
@@ -195,7 +208,6 @@ static void BombArrow_TryDetonate(EnArrow* arrow) {
      * since the explosion would destroy it.
      */
     Actor_Kill(&arrow->actor);
-    loosed = false;
   } else {
     /*
      * Arrow actor destroyed likely because equipment has been swapped.
@@ -229,20 +241,16 @@ static void BombArrow_UpdateAttachedBomb(EnArrow* arrow, PlayState* play) {
     Inventory_ChangeAmmo(ITEM_BOMB, -1);
 
     /*
-     * A linked, unreleased bomb reaching timer 0 means it detonated while
-     * nocked. Expend an arrow also. The explosion destroys it.
-     * TODO: timer never seems to resolve to <= 0 here. 8 seems to be where it
-     * hits once and only once. Will this be consistent?
+     * Bomb is exploding whilst nocked.
+     * Expend an arrow also, as the explosion destroys it.
      */
-    if (bomb->timer <= 8) {
+    if (BombArrow_IsBombExploding(bomb)) {
       Inventory_ChangeAmmo(ITEM_BOW, -1);
     }
 
     link->loosed = true;
   }
 
-  // arrow->unk_260 == 0 ? 0 : ++(arrow->unk_260);
-  arrow->unk_260 = 99;
   Actor_SetScale(&bomb->actor, 0.0025f);
 
   /*

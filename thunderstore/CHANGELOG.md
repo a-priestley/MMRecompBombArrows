@@ -1,5 +1,4 @@
-### 1.0.2
+### 1.0.3
 
-* add configurable defuse on submerge
-* add configurable flyer-impact (keese/guay) detonation
-* add configurable remote detonation via C-button
+- add arrow cycling support integration
+- fix flash lighting effect persisting on nocked detonation

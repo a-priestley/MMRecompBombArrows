@@ -1,7 +1,8 @@
 {
   "name": "Bomb_Arrows",
-  "version_number": "1.0.2",
+  "version_number": "1.0.3",
   "website_url": "https://github.com/a-priestley/MMRecompBombArrows",
   "description": "Combine arrows with bombs for explosive projectiles.",
-  "dependencies": ["tomtee-Interface_Helper-1.1.0"]
+  "dependencies": ["tomtee-Interface_Helper-1.1.0"],
+  "optional_dependencies": ["LoadingError404-Arrow_Cycling-1.0.1"]
 }
