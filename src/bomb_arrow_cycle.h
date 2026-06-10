@@ -1,5 +1,5 @@
-#ifndef SRC_BOMB_ARROW_CYCLE_H_
-#define SRC_BOMB_ARROW_CYCLE_H_
+#ifndef BOMB_ARROW_CYCLE_H_
+#define BOMB_ARROW_CYCLE_H_
 
 #include <stdbool.h>
 
@@ -16,4 +16,4 @@ typedef struct {
 RECOMP_IMPORT("mm_recomp_arrow_cycling",
               void AddArrowEntry(CyclingArrowEntry entry));
 
-#endif  // SRC_BOMB_ARROW_CYCLE_H_
+#endif  // BOMB_ARROW_CYCLE_H_
