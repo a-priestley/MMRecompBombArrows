@@ -2,7 +2,7 @@
 
 id = "mm_recomp_bomb_arrows"
 
-version = "1.0.2"
+version = "1.0.3"
 
 display_name = "Bomb Arrows"
 
@@ -23,7 +23,7 @@ minimum_recomp_version = "1.2.2"
 
 dependencies = ["mm_recomp_interface_helper:1.1.0"]
 
-optional_dependencies = ["mm_recomp_arrow_cycling"]
+optional_dependencies = ["mm_recomp_arrow_cycling:1.0.1"]
 
 native_libraries = []
 
